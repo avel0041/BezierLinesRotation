@@ -1,0 +1,133 @@
+<HTML>
+<BODY>
+<canvas id="bezier" width="500" height="400">
+</canvas>
+<script>
+	function Line(ctx, x0, y0, x1, y1) {
+		var dy = Math.abs(y1-y0);
+		var dx = Math.abs(x1-x0);
+		var dmax = Math.max(dx, dy);
+		var dmin = Math.min(dx, dy);
+		var xdir = 1;
+		if (x1<x0) xdir = -1;	
+		var ydir = 1;
+		if (y1<y0) ydir = -1;
+		var eps = 0;
+		var s = 1;
+		var k=2*dmin;
+		if (dy<=dx) {
+			var y = y0;
+			for (var x=x0; x*xdir<=x1*xdir; x+=xdir) {
+				ctx.fillRect(x*s, y*s, 1*s, 1*s);
+				eps = eps+k;
+				if (eps>dmax) {
+					y+=ydir;
+					eps = eps - 2*dmax;
+				}	
+			} 
+		} else {
+			var x = x0;
+			for (var y=y0; y*ydir<=y1*ydir; y+=ydir) {
+				ctx.fillRect(x*s, y*s, 1*s, 1*s);
+				eps = eps+k;
+				if (eps>dmax) {
+					x+=xdir;
+					eps = eps - 2*dmax;
+				}	
+			} 
+		}		
+	}
+	
+	function dist(x0, y0, x1, y1, x2, y2){
+		return Math.abs((y2 - y0) * x1 - (x2 - x0) * y1 + (x2 * y0 - x0 * y2)) / (Math.sqrt((y2 - y0) * (y2 - y0) + (x2 - x0) * (x2 - x0)))
+	}
+	
+	function BezierLine(ctx, x0, y0, x1, y1, x2, y2){
+		if(dist(x0, y0, x1, y1, x2, y2) > 1){
+			var x3= 0.5*x0 + 0.5*x1;
+			var y3= 0.5*y0 + 0.5*y1;
+		
+			var x4= 0.5*x1 + 0.5*x2;
+			var y4= 0.5*y1 + 0.5*y2;
+		
+			var x5= 0.5*x3 + 0.5*x4;
+			var y5= 0.5*y3 + 0.5*y4;
+		
+			BezierLine(ctx, x0, y0, x3, y3, x5, y5);
+			BezierLine(ctx, x5, y5, x4, y4, x2, y2);
+		} else{
+			Line(ctx, x0, y0, x2, y2);
+			return;
+		}
+	}
+	
+	function MultiplyMatrix(A,B) {
+		var rowsA = A.length, colsA = A[0].length,
+			rowsB = B.length, colsB = B[0].length,
+			C = [];
+		if (colsA != rowsB) return false;
+		for (var i = 0; i < rowsA; i++) C[ i ] = [];
+		for (var k = 0; k < colsB; k++){ 
+			for (var i = 0; i < rowsA; i++){ 
+			var t = 0;
+				for (var j = 0; j < rowsB; j++) t += A[i][j]*B[j][k];
+			C[i][k] = t;
+			}
+		}
+		return C;
+	}
+</script>
+<script>
+	var canvas = document.getElementById("bezier");
+	var ctx = canvas.getContext("2d");
+
+        
+	var counter = 0;
+	
+	canvas.addEventListener("click", function(event){
+		if (counter == 0){
+			x0 = event.offsetX;
+			y0 = event.offsetY;
+			ctx.fillRect(x0, y0, 1, 1);
+			counter = 1;
+			return;
+		}
+		if (counter == 1){
+			x1 = event.offsetX;
+			y1 = event.offsetY;
+			ctx.fillRect(x1, y1, 1, 1);
+			counter = 2;
+			return;
+		}
+		if (counter == 2){
+			x2 = event.offsetX;
+			y2 = event.offsetY;
+			ctx.fillRect(x2, y2, 1, 1);
+			counter = 0;
+		}
+		
+        BezierLine(ctx, x0, y0, x1, y1, x2, y2);
+		
+        for(var i = 0; i < 360; i += 10){
+            var a = i*Math.PI/180;
+            var x3 = x0 - x1;
+			var y3 = y0 - y1;
+			var x4 = x2 - x1;
+			var y4 = y2 - y1;
+            var M = [[Math.cos(a), 0, -1*Math.sin(a), 0],
+					 [0,           1, 0,              0],
+                     [Math.sin(a), 0, Math.cos(a),    0],
+                     [0,           0, 0,              1]];
+            var C = MultiplyMatrix(M, [[x3], [y3], [0], [1]]);
+            x3 = C[0][0] + x1;
+            y3 = C[1][0] + y1;
+            C = MultiplyMatrix(M, [[x4], [y4], [0], [1]]);
+            x4 = C[0][0] + x1;
+            y4 = C[1][0] + y1;
+            BezierLine(ctx, x3, y3, x1, y1, x4, y4);
+		}
+	});
+
+</script>
+</BODY>
+</HTML>
